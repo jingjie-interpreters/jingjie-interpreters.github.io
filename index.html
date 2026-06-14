@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live Stream</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Jersey+10&family=VT323&display=swap" rel="stylesheet">
+  <style>
+    /* ===== Reset & Base ===== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      font-size: 14px;
+    }
+
+    body {
+      background-color: #121212;
+      color: #D4D4D4;
+      font-family: "Courier New", "Consolas", "Monaco", "Liberation Mono", monospace;
+      line-height: 1.6;
+      min-height: 100vh;
+      padding: 20px;
+      position: relative;
+    }
+
+    /* ===== Noise Texture Overlay ===== */
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0.03;
+      pointer-events: none;
+      z-index: 9999;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+      background-repeat: repeat;
+      background-size: 256px 256px;
+    }
+
+    /* ===== Layout Container ===== */
+    .page {
+      max-width: 1600px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ===== Section 1: Twitch Stream ===== */
+    .stream-section {
+      margin-bottom: 16px;
+    }
+
+    .stream-container {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      position: relative;
+      overflow: hidden;
+      background: #121212;
+    }
+
+    .stream-placeholder {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #888888;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    #twitch-player {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: none;
+    }
+
+    #offline-gif {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 60%;
+      height: 60%;
+      object-fit: contain;
+      display: none;
+    }
+
+    /* ===== Section 2: Text Input ===== */
+    .input-section {
+      margin-bottom: 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .text-input {
+      width: 100%;
+      background: #252525;
+      border: none;
+      color: #D4D4D4;
+      padding: 8px 12px;
+      font-family: "VT323", "Courier New", monospace;
+      font-size: 24px;
+      text-align: center;
+      outline: none;
+    }
+
+    .text-input::placeholder {
+      color: #888888;
+      font-family: "VT323", "Courier New", monospace;
+      font-size: 24px;
+    }
+
+    .send-button {
+      background: #444444;
+      border: none;
+      color: #D4D4D4;
+      padding: 8px 24px;
+      font-family: "Jersey 10", "Courier New", monospace;
+      font-size: 20px;
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 10px;
+    }
+
+    .send-button:hover {
+      background: #555555;
+    }
+
+    .send-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .validation-error {
+      color: #FF5555;
+      font-size: 12px;
+      margin-top: 6px;
+      min-height: 18px;
+      line-height: 18px;
+      text-align: center;
+      width: 100%;
+    }
+
+    /* ===== Section 3: Info ===== */
+    .info-section {
+      text-align: center;
+    }
+
+    .cover-image {
+      width: 100%;
+      height: auto;
+      display: block;
+      margin: 0 0 24px;
+    }
+
+    .bio-title,
+    .statement-title {
+      font-family: "Jersey 10", "Courier New", monospace;
+      font-size: 22px;
+      color: #E0E0E0;
+      text-align: center;
+      max-width: 600px;
+      margin: 0 auto 8px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .artist-bio,
+    .project-statement {
+      color: #D4D4D4;
+      font-family: "VT323", "Courier New", monospace;
+      font-size: 24px;
+      margin-bottom: 24px;
+      text-align: center;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .project-statement {
+      color: #A0A0A0;
+    }
+
+    /* ===== Expandable Details ===== */
+    details.expandable {
+      text-align: left;
+      margin: 0 0 16px;
+      border: none;
+    }
+
+    details.expandable > summary {
+      padding: 10px 0;
+      cursor: pointer;
+      color: #E0E0E0;
+      font-family: "Jersey 10", "Courier New", monospace;
+      font-size: 20px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      list-style: none;
+      background: none;
+      user-select: none;
+    }
+
+    details.expandable > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    details.expandable > summary::before {
+      content: "\25B8";
+      display: inline-block;
+      width: 16px;
+      color: #888888;
+      transition: transform 0.15s ease;
+    }
+
+    details.expandable[open] > summary::before {
+      content: "\25BE";
+    }
+
+    details.expandable .details-content {
+      padding: 16px;
+    }
+
+    details.expandable .details-content img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .copyright {
+      font-family: "VT323", "Courier New", monospace;
+      font-size: 24px;
+      color: #A0A0A0;
+      text-align: center;
+      padding: 24px 0 12px;
+    }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 480px) {
+      body {
+        padding: 12px;
+      }
+      .send-button {
+        width: 100%;
+      }
+    }
+
+    @media (min-width: 481px) and (max-width: 768px) {
+      body {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- ===== Section 1: Twitch Live Stream ===== -->
+    <section class="stream-section">
+      <div class="stream-container">
+        <!-- Twitch Embed API will render the player here -->
+        <div id="twitch-player"></div>
+        <!--
+          [USER: Replace "assets/placeholder.webm" with the path to your custom looping video]
+          This video plays on loop (muted) when the Twitch channel is not live.
+        -->
+        <video id="offline-gif" src="assets/placeholder.webm" autoplay loop muted playsinline></video>
+        <div id="stream-placeholder" class="stream-placeholder"></div>
+      </div>
+    </section>
+
+    <!-- ===== Section 2: Text Input ===== -->
+    <section class="input-section">
+      <input
+        type="text"
+        id="text-input"
+        class="text-input"
+        placeholder="Enter text to interact..."
+        maxlength="200"
+        autocomplete="off"
+      >
+      <button id="send-button" class="send-button">Send</button>
+      <div id="validation-error" class="validation-error"></div>
+    </section>
+
+    <div style="height: 150px;"></div>
+
+    <!-- ===== Section 3: Project Info ===== -->
+    <section class="info-section">
+      <!--
+        [USER: Replace "assets/cover.webm" with your cover video]
+      -->
+      <video
+        src="assets/cover.webm"
+        class="cover-image"
+        autoplay loop muted playsinline
+      ></video>
+
+      <div style="height: 150px;"></div>
+
+      <!--
+        [USER: Replace with your project statement title]
+      -->
+      <h2 class="statement-title">Project Statement</h2>
+      <!--
+        [USER: Replace this placeholder text with your actual project statement]
+      -->
+      <p class="project-statement">
+        <i>Defending Jingjie in Front of His Interpreters</i> asks how a performance can continue to speak after its original moment has passed, and who gains authority to interpret it once it survives only as data, noise, and archive. It unfolds across two stages of the same exhaustion, separated in time but sharing one sound. It all began as an act of extreme, self-imposed labor: for seven hours, I recited an endless stream of text generated by a large language model fine-tuned on my own private writings. My voice and the model's output were driven toward the same collapse—two forms of overproduction, human exhaustion and AI degeneration, gradually converged into the same repetitive sonic representation, a callus noise formed by their friction. This collapse was all documented, and my body functioned less as a site of personal expression than as a methodological intermediary. It shows an alienated body, a worn-down process. The resulting seven-hour audio-visual recording remained and became the corpus, a material residue from which the machine-listening system could continuously retrieve material, without my involvement.
+      </p>
+      <p class="project-statement">
+        In its current, web-native form, this archive is reactivated as a continuous live broadcast event. This web interface, modeled on the anonymous churn of danmaku culture, lets audiences type a single line that vanishes the instant it is sent, no log, no name, no trace. In this structural deletion, the system is built so that neither the audience nor I can ever retrieve what was typed, only what noise it became. Therefore, seconds later, it returns as sound: text-to-speech run through RAVE, a neural network trained on my own seven hours of recitation voice, so that every stranger's words emerge in my recitation, closer to noise than language. Then, FluCoMa and Data Knot in Max/MSP listen to this borrowed voice, measure and match its acoustic features against the seven-hour sound archive, and pull back the most similar fragments of the original performance, spliced, looped, and recombined onto the screen.
+      </p>
+      <p class="project-statement">
+        Or rather, each visitor triggers less as a response than an interpretative haunting: their anonymous input becomes a new interpreter without intuitive rules, calling residue fragments of the archived performance, while the system answers with whichever fragment of that labor most resembles the disturbance. Their own words are never heard, muted, resynthesized, yet this erasure is also what activates different agency between participant, archive, and system through this blind, untraceable participation in someone else's archive. <i>Defending Jingjie in Front of His Interpreters</i> presents, finally, a residue of a noise that remains—still recitable, still responsive, still capable of being startled into language by a stranger, long after its source has gone silent.
+      </p>
+
+      <div style="height: 150px;"></div>
+
+      <!--
+        [USER: Replace with your artist bio title]
+      -->
+      <h2 class="bio-title">Artist Bio</h2>
+      <p class="artist-bio">
+        Jingjie Zhang is an artist and designer currently living in London. Currently a communication PhD candidate at the Royal College of Art, with a master's degree from the Design Department at Goldsmiths, University of London. Principal creator of the indie band Subsequence, Dog! and main founder of the Glimpse In a Daze art collective and studio.
+        His practice spans performance, installation, and text. He employs techniques such as machine listening, sequence models, and real-time systems to investigate the mechanical reproduction, redundancy, ambiguity, and clichés within sonic and textual information, exploring contemporary forms of noise.
+      </p>
+
+      <div style="height: 200px;"></div>
+
+      <!--
+        [USER: Replace "assets/logistics.png" with your logistics flow diagram]
+      -->
+      <details class="expandable">
+        <summary>Web Logistics Flow</summary>
+        <div class="details-content">
+          <img src="assets/logistics.png" alt="Logistics Flow Diagram">
+        </div>
+      </details>
+
+      <!--
+        [USER: Replace "assets/technical.png" with your technical signal flow diagram]
+      -->
+      <details class="expandable">
+        <summary>Technical Signal Flow</summary>
+        <div class="details-content">
+          <img src="assets/technical.png" alt="Technical Signal Flow Diagram">
+        </div>
+      </details>
+
+      <div style="height: 150px;"></div>
+
+      <!--
+        [USER: Replace "assets/cover.jpg" with your bottom image]
+      -->
+      <img
+        src="assets/cover.jpg"
+        alt="Bottom Image"
+        class="cover-image"
+      >
+    </section>
+
+    <footer class="copyright">
+      &copy; Jingjie Zhang, 2026
+    </footer>
+
+  </div>
+
+  <!-- ===== Twitch Embed API SDK ===== -->
+  <script src="https://embed.twitch.tv/embed/v1.js"></script>
+
+  <!-- ===== Twitch Stream Embed ===== -->
+  <script>
+    (function () {
+      // [USER: Replace "YOUR_TWITCH_CHANNEL_NAME" with your actual Twitch channel name]
+      var TWITCH_CHANNEL = "jing_z1n";
+
+      var playerEl = document.getElementById("twitch-player");
+      var gifEl = document.getElementById("offline-gif");
+      var placeholderEl = document.getElementById("stream-placeholder");
+
+      // Initial state: show GIF (assume offline), hide player
+      gifEl.style.display = "block";
+
+      var embed = new Twitch.Embed("twitch-player", {
+        width: "100%",
+        height: "100%",
+        channel: TWITCH_CHANNEL,
+        parent: window.location.hostname,
+        layout: "video"
+      });
+
+      embed.addEventListener(Twitch.Embed.VIDEO_READY, function () {
+        // Player is ready; remove the loading placeholder
+        if (placeholderEl) {
+          placeholderEl.style.display = "none";
+        }
+      });
+
+      embed.addEventListener(Twitch.Player.ONLINE, function () {
+        // Channel went live — show the player, hide the GIF
+        playerEl.style.display = "block";
+        gifEl.style.display = "none";
+      });
+
+      embed.addEventListener(Twitch.Player.OFFLINE, function () {
+        // Channel went offline — show the GIF, hide the player
+        playerEl.style.display = "none";
+        gifEl.style.display = "block";
+      });
+    })();
+  </script>
+
+  <!-- ===== Firebase SDK (modular, from CDN) ===== -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+    import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-database.js";
+
+    // Firebase configuration
+    // [USER: These values are from your Firebase project "elo2026-a6ae6".
+    //        Update them if your Firebase project changes.]
+    const firebaseConfig = {
+      apiKey: "AIzaSyA3d-E__66HDDLn-We79fY2fpAXIAJmIT0",
+      authDomain: "elo2026-a6ae6.firebaseapp.com",
+      projectId: "elo2026-a6ae6",
+      storageBucket: "elo2026-a6ae6.firebasestorage.app",
+      messagingSenderId: "608669888694",
+      appId: "1:608669888694:web:1330badb3a540e58fcf617",
+      measurementId: "G-XGP4VGERSJ"
+    };
+
+    // [USER: Update this URL if your Realtime Database location changes]
+    const DATABASE_URL = "https://elo2026-a6ae6-default-rtdb.firebaseio.com";
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app, DATABASE_URL);
+
+    // ===== DOM Elements =====
+    const textInput = document.getElementById("text-input");
+    const sendButton = document.getElementById("send-button");
+    const validationError = document.getElementById("validation-error");
+
+    const MAX_CHARS = 150;
+
+    // ===== Validation =====
+    function showError(message) {
+      validationError.textContent = message;
+    }
+
+    function clearError() {
+      validationError.textContent = "";
+    }
+
+    function validate(text) {
+      if (!text || text.trim().length === 0) {
+        showError("Content cannot be empty.");
+        return false;
+      }
+      if (text.length > MAX_CHARS) {
+        showError("A single submission cannot exceed 150 characters.");
+        return false;
+      }
+      clearError();
+      return true;
+    }
+
+    // ===== Submission =====
+    async function submitText(text) {
+      sendButton.disabled = true;
+      sendButton.textContent = "Sending...";
+
+      try {
+        const messagesRef = ref(db, "messages/");
+        const messageData = {
+          text: text.trim(),
+          timestamp: Date.now(),
+          status: "pending"
+        };
+
+        await push(messagesRef, messageData);
+
+        // Success — clear input
+        textInput.value = "";
+        clearError();
+      } catch (error) {
+        console.error("Firebase push failed:", error);
+        showError("Submission failed, please retry.");
+      } finally {
+        sendButton.disabled = false;
+        sendButton.textContent = "Send";
+      }
+    }
+
+    // ===== Event Listeners =====
+    sendButton.addEventListener("click", function () {
+      const text = textInput.value;
+      if (validate(text)) {
+        submitText(text);
+      }
+    });
+
+    // Allow Enter key to submit
+    textInput.addEventListener("keydown", function (event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        const text = textInput.value;
+        if (validate(text)) {
+          submitText(text);
+        }
+      }
+    });
+
+    // Clear error when user starts typing
+    textInput.addEventListener("input", function () {
+      if (validationError.textContent) {
+        clearError();
+      }
+    });
+  </script>
+</body>
+</html>
