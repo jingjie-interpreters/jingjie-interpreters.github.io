@@ -213,7 +213,6 @@
       color: #E0E0E0;
       font-family: "Jersey 10", "Courier New", monospace;
       font-size: 20px;
-      text-transform: uppercase;
       letter-spacing: 1px;
       list-style: none;
       background: none;
@@ -244,6 +243,34 @@
       width: 100%;
       height: auto;
       display: block;
+    }
+
+    /* ===== Next Transmission ===== */
+    .next-transmission {
+      font-family: "VT323", "Courier New", monospace;
+      font-size: 24px;
+      color: #999999;
+      text-align: center;
+      line-height: 1.4;
+      margin-bottom: 20px;
+    }
+
+    /* ===== Vimeo Embed ===== */
+    .vimeo-container {
+      position: relative;
+      width: 100%;
+      max-width: 900px;
+      margin: 0 auto;
+      padding-bottom: 56.25%;
+    }
+
+    .vimeo-container iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
     }
 
     .copyright {
@@ -302,7 +329,15 @@
       <div id="validation-error" class="validation-error"></div>
     </section>
 
-    <div style="height: 150px;"></div>
+    <div style="height: 120px;"></div>
+
+    <div class="next-transmission">
+      Next transmission:<br>
+      15 July 2025, 12:00–0:00 BST<br>
+      (7:00–19:00 EDT)
+    </div>
+
+    <div style="height: 130px;"></div>
 
     <!-- ===== Section 3: Project Info ===== -->
     <section class="info-section">
@@ -347,11 +382,24 @@
 
       <div style="height: 200px;"></div>
 
+      <details class="expandable">
+        <summary>source performance documentation, 7h, 2025</summary>
+        <div class="details-content">
+          <div class="vimeo-container">
+            <iframe
+              src="https://player.vimeo.com/video/1063663911"
+              allow="autoplay; fullscreen; picture-in-picture"
+              allowfullscreen>
+            </iframe>
+          </div>
+        </div>
+      </details>
+
       <!--
         [USER: Replace "assets/logistics.png" with your logistics flow diagram]
       -->
       <details class="expandable">
-        <summary>Web Logistics Flow</summary>
+        <summary>web logistics flow</summary>
         <div class="details-content">
           <img src="assets/logistics.png" alt="Logistics Flow Diagram">
         </div>
@@ -361,7 +409,7 @@
         [USER: Replace "assets/technical.png" with your technical signal flow diagram]
       -->
       <details class="expandable">
-        <summary>Technical Signal Flow</summary>
+        <summary>technical signal flow</summary>
         <div class="details-content">
           <img src="assets/technical.png" alt="Technical Signal Flow Diagram">
         </div>
